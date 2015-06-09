@@ -8,15 +8,15 @@ public class BaseCharacterController : MonoBehaviour {
 
 
 	//===外部パラメータ===================
-	[Syestem.NonSerialized] public float hpMax=10.0f;
-	[Syestem.NonSerialized] public float hp=10.0f;
-	[Syestem.NonSerialized] public float dir=1.0f;
-	[Syestem.NonSerialized] public float speed=6.0f;
-	[Syestem.NonSerialized] public float basScaleX=1.0f;
-	[Syestem.NonSerialized] public bool activeSts=false;
-	[Syestem.NonSerialized] public bool jumped=false;
-	[Syestem.NonSerialized] public bool grounded=false;
-	[Syestem.NonSerialized] public bool groundedPrev=false;
+	[System.NonSerialized] public float hpMax=10.0f;
+	[System.NonSerialized] public float hp=10.0f;
+	[System.NonSerialized] public float dir=1.0f;
+	[System.NonSerialized] public float speed=6.0f;
+	[System.NonSerialized] public float basScaleX=1.0f;
+	[System.NonSerialized] public bool activeSts=false;
+	[System.NonSerialized] public bool jumped=false;
+	[System.NonSerialized] public bool grounded=false;
+	[System.NonSerialized] public bool groundedPrev=false;
 
 	//===キャッシュ======================
 	[System.NonSerialized] public Animator animator;
@@ -39,26 +39,101 @@ public class BaseCharacterController : MonoBehaviour {
 	protected virtual void Awake()
 	{
 		animator = GetComponent<Animator> ();
-		groundCheck_L=transform.Find ("GroundCheck_L");
-		groundCheck_C=transform.Find ("GroundCheck_C");
-		groundCheck_R=transform.Find ("GroundCheck_R");
+		groundCheck_L = transform.Find ("GroundCheck_L");
+		groundCheck_C = transform.Find ("GroundCheck_C");
+		groundCheck_R = transform.Find ("GroundCheck_R");
 
-	dir = (transform.localScale.x > 0.0f) ? 1 : -1;
+		dir = (transform.localScale.x > 0.0f) ? 1 : -1;
 		basScaleX = transform.localScale.x * dir;
+		transform.localScale = new Vector3 (
+			basScaleX, transform.localScale.y, transform.localScale.z);
+
+		activeSts = true;
+		gravityScale = GetComponent<Rigidbody2D>().gravityScale;
+	}
+
+	protected virtual void Start(){
+	}
+
+	protected virtual void Update(){
+	}
+
+	protected virtual void FixedUpdate(){
+	//落下チェック
+		if (transform.position.y < -30.0f) {
+			Dead(false);	//死亡
+		}
+	//地面チェック
+		groundedPrev = grounded;
+		grounded = false;
+
+		groundCheck_OnRoadObject = null;
+		groundCheck_OnMoveObject = null;
+		groundCheck_OmEmemyObject = null;
 
 
+		Collider2D[][] groundCheckCollider = new Collider2D[3][];
+		groundCheckCollider [0] = Physics2D.OverlapPointAll (groundCheck_L.position);
+		groundCheckCollider [1] = Physics2D.OverlapPointAll (groundCheck_C.position);
+		groundCheckCollider [2] = Physics2D.OverlapPointAll (groundCheck_R.position);
 
+		foreach (Collider2D[]groundCheckList in groundCheckCollider) {
+			foreach(Collider2D groundCheck in groundCheckList){
+				if(groundCheck!=null){
+					if(!groundCheck.isTrigger){
+						grounded=true;
+						if(groundCheck.tag=="Road"){
+							groundCheck_OnRoadObject=groundCheck.gameObject;
+						}else if(groundCheck.tag=="MoveObject"){
+							groundCheck_OnMoveObject=groundCheck.gameObject;
+						}else if(groundCheck.tag=="Enemy"){
+							groundCheck_OmEmemyObject=groundCheck.gameObject;
+						}
+					}
+				}
+			}
+		}
+		//キャラクター個別の処理
+		FixedUpdateCharacter ();
 
+		//移動計算
+		GetComponent<Rigidbody2D>().velocity = new Vector2 (speedVx, GetComponent<Rigidbody2D>().velocity.y);
 
+		//Velocityの値をチェック
+		float vx = Mathf.Clamp (GetComponent<Rigidbody2D>().velocity.x, velocityMin.x, velocityMax.x);
+		float vy = Mathf.Clamp (GetComponent<Rigidbody2D>().velocity.y, velocityMin.y, velocityMax.y);
+		GetComponent<Rigidbody2D>().velocity = new Vector2 (vx, vy);
+	}
 		
-	}
-	// Use this for initialization
-	void Start () {
-	
+	protected virtual void FixedUpdateCharacter(){
 	}
 	
-	// Update is called once per frame
-	void Update () {
-	
+	//======基本コード（基本アクション）========
+	public virtual void ActionMove(float n){
+		if (n != 0.0f) {
+			dir = Mathf.Sign (n);
+			speedVx = speed * n;
+			animator.SetTrigger ("Run");
+		} else {
+			speedVx=0;
+			animator.SetTrigger("idle");
+		}
 	}
+
+	//======コード（その他）========
+	public virtual void Dead(bool gameOver){
+		if (!activeSts) {
+			return;
+		}
+		activeSts = false;
+		animator.SetTrigger("Dead");
+	}
+
+	public virtual bool SetHP(float _hp,float _hpMax){
+		hp = _hp;
+		hpMax = _hpMax;
+		return (hp <= 0);
+	}
+
+
 }
