@@ -6,19 +6,38 @@ public class PlayerController : BaseCharacterController {
 	// === 外部パラメータ（インスペクタ表示） =====================
 	public float 	initHpMax = 20.0f;
 	[Range(0.1f,100.0f)] public float 	initSpeed = 12.0f;
-	
+
+	//============キャッシュ===================================
+	LineRenderer hudHpBar;
+	TextMesh hudScore;
 	// === 内部パラメータ ======================================
 	int 			jumpCount			= 0;
 	bool			breakEnabled		= true;
 	float 			groundFriction		= 0.0f;
-	
+	int			    score 					= 0;
+
+	float comboTimer=0.0f;
+
 	// === コード（Monobehaviour基本機能の実装） ================
 	protected override void Awake () {
 		base.Awake ();
+
+		//キャッシュ
+		hudHpBar = GameObject.Find ("HUD_HPBar").GetComponent<LineRenderer> ();
+		hudScore = GameObject.Find ("HUD_Score").GetComponent<TextMesh> ();
 		
+
 		// パラメータ初期化
 		speed = initSpeed;
 		SetHP(initHpMax,initHpMax);
+	}
+	protected override void Update (){
+		base.Update ();
+
+		hudHpBar.SetPosition (1, new Vector3 (5.0f * (hp / hpMax), 0.0f, 0.0f));
+		hudScore.text = string.Format ("Score{0}", score);
+
+	
 	}
 	
 	protected override void FixedUpdateCharacter () {
