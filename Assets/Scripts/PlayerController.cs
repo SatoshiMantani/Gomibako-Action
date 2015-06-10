@@ -108,6 +108,9 @@ public class PlayerController : BaseCharacterController {
 			break;
 		}
 	}
+	public void ActionAttack(){
+		animator.SetTrigger ("Attack_A");
+	}
 	
 }
 
