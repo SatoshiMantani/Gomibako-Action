@@ -7,16 +7,44 @@ public class PlayerController : BaseCharacterController {
 	public float 	initHpMax = 20.0f;
 	[Range(0.1f,100.0f)] public float 	initSpeed = 12.0f;
 
+	//セーブデータパラメータ
+	public static	float 		nowHpMax 				= 0;
+	public static	float 		nowHp 	  				= 0;
+	public static 	int			score 					= 0;
+	
+	// アニメーションのハッシュ名
+	public readonly static int ANISTS_Idle 	 		= Animator.StringToHash("Base Layer.Player_Idle");
+	public readonly static int ANISTS_Walk 	 		= Animator.StringToHash("Base Layer.Player_Walk");
+	public readonly static int ANISTS_Run 	 	 	= Animator.StringToHash("Base Layer.Player_Run");
+	public readonly static int ANISTS_Jump 	 		= Animator.StringToHash("Base Layer.Player_Jump");
+	public readonly static int ANISTS_ATTACK_A 		= Animator.StringToHash("Base Layer.Player_ATK_A");
+	public readonly static int ANISTS_DEAD  		= Animator.StringToHash("Base Layer.Player_Dead");
+
 	//============キャッシュ===================================
 	LineRenderer hudHpBar;
 	TextMesh hudScore;
+
 	// === 内部パラメータ ======================================
 	int 			jumpCount			= 0;
 	bool			breakEnabled		= true;
 	float 			groundFriction		= 0.0f;
-	int			    score 					= 0;
+	//int			    score 					= 0;
 
 	float comboTimer=0.0f;
+
+	// === コード（サポート関数） ===============================
+	public static GameObject GetGameObject() {
+		return GameObject.FindGameObjectWithTag ("Player");
+	}
+	public static Transform GetTranform() {
+		return GameObject.FindGameObjectWithTag ("Player").transform;
+	}
+	public static PlayerController GetController() {
+		return GameObject.FindGameObjectWithTag ("Player").GetComponent<PlayerController>();
+	}
+	public static Animator GetAnimator() {
+		return GameObject.FindGameObjectWithTag ("Player").GetComponent<Animator>();
+	}
 
 	// === コード（Monobehaviour基本機能の実装） ================
 	protected override void Awake () {
@@ -130,7 +158,55 @@ public class PlayerController : BaseCharacterController {
 	public void ActionAttack(){
 		animator.SetTrigger ("Attack_A");
 	}
+
 	
+	public void ActionDamage(float damage) {
+		if (!activeSts) {
+			return;
+		}
+		
+		animator.SetTrigger ("DMG_A");
+		speedVx = 0;
+		GetComponent<Rigidbody2D>().gravityScale = gravityScale;
+		
+		if (jumped) {
+			damage *= 1.5f;
+		}
+		
+		if (SetHP(hp - damage,hpMax)) {
+			Dead(true); // 死亡
+		}
+	}
+
+	// === コード（その他） ====================================
+	public override void Dead(bool gameOver) {
+		// 死亡処理をしてもいいか？
+		AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+		if (!activeSts || stateInfo.nameHash == ANISTS_DEAD) {
+			return;
+		}
+		
+		base.Dead (gameOver);
+		
+		SetHP(0,hpMax);
+		Invoke ("GameOver", 3.0f);
+	}
+	
+	public void GameOver() {
+		PlayerController.score = 0;
+		Application.LoadLevel(Application.loadedLevelName);
+	}
+	
+	public override bool SetHP(float _hp,float _hpMax) {
+		if (_hp > _hpMax) {
+			_hp = _hpMax;
+		}
+		
+		nowHp 		= _hp;
+		nowHpMax 	= _hpMax;
+		return base.SetHP (_hp, _hpMax);
+	}
+
 }
 
 
